@@ -1,5 +1,8 @@
 import streamlit as st
+import pandas as pd
 
+
+#function to calculate grade
 def grade(marks):
     if marks == 100:
         return 10
@@ -8,6 +11,7 @@ def grade(marks):
     else:
         return 0
 
+#subject data
 def get_subject_data(semester_index, subject_index):
     name = st.text_input(f"Enter the name of subject {subject_index} for Semester {semester_index}: ")
     credits = st.number_input("Enter the credits of the subject: ", min_value=0, step=1, value=1, key=f"credits_{semester_index}_{subject_index}")
@@ -25,6 +29,7 @@ def get_subject_data(semester_index, subject_index):
         st.warning("Please enter valid marks (comma-separated)")
         return 0, 0
 
+#sgpa function
 def calculate_sgpa(subjects_data):
     sum_credits = sum(credits for credits, _ in subjects_data)
     
@@ -35,6 +40,7 @@ def calculate_sgpa(subjects_data):
         st.warning("Total credits for the semester should be greater than zero.")
         return 0
 
+#CGPA function
 def calculate_cgpa(semester_data):
     total_semesters = len(semester_data)
     cumulative_sgpa = sum(semester_sgpa for semester_sgpa, _ in semester_data)
@@ -46,22 +52,68 @@ def calculate_cgpa(semester_data):
         st.warning("Number of semesters should be greater than zero.")
         return 0
 
+
 def input_semester(semester_index):
     st.subheader(f"Semester {semester_index}:")
-    subjects_data = [get_subject_data(semester_index, i) for i in range(1, 7)]
+    if semester_index >= 3:
+        num_subjects = 5 
+    else:
+        num_subjects = 6
+    subjects_data = [get_subject_data(semester_index, i) for i in range(1, num_subjects + 1)]
     sgpa_value = calculate_sgpa(subjects_data)
     st.write(f"SGPA = {sgpa_value:.2f}")
     return sgpa_value, subjects_data
 
+def calculate_required_sgpa(current_cgpa, target_cgpa, completed_semesters):
+    if completed_semesters == 0:
+        return target_cgpa
+    else:
+        required_sgpa = (target_cgpa * (completed_semesters + 1) - current_cgpa * completed_semesters) / 1
+        return required_sgpa
+
+#UI
 def main():
-    st.title("PESU GPA Calculator")
-    st.write("This is a simple GPA calculator designed for PESU students, by a PESU student.")
-    st.write("Note: Enter marks in the following order: ISA1, ISA2, ESA, Project Marks. ISA marks are scaled to 40, Project marks are scaled to 10 and ESA marks are scaled to 100.")
-    st.subheader("Number of Semesters")
+    st.title("GPA Calculator")
+    st.write("This is a simple GPA calculator for PES University students.")
+    st.write("Besides the fact that we are students of PES University, we have no other sort of formal affiliation with the management of the university. Thus, the calculation methods used in this might not reflect PESU's actual calculation methods. This is just a fun CS semester 1 mini project :D")
+    
     n = st.number_input("Enter the number of semesters completed: ", min_value=1, step=1, value=1, key="num_semesters")
     semester_data = [input_semester(i) for i in range(1, int(n) + 1)]
     final_cgpa = calculate_cgpa(semester_data)
-    st.write(f"Your CGPA is {final_cgpa:.2f}")
+    st.success(f"Your CGPA is {final_cgpa:.2f}")
+
+    #Visualization
+    df_sgpa = pd.DataFrame({
+        'Semester': list(range(1, int(n) + 1)),
+        'SGPA': [sgpa for sgpa, _ in semester_data]
+    })
+
+    df_cgpa = pd.DataFrame({
+        'Semester': list(range(1, int(n) + 1)),
+        'CGPA': [calculate_cgpa(semester_data[:i + 1]) for i in range(int(n))]
+    })
+
+    #Line charts
+
+    st.subheader("SGPA Over Semesters")
+    st.line_chart(df_sgpa.set_index('Semester'))
+
+    
+    st.subheader("CGPA Over Semesters")
+    st.line_chart(df_cgpa.set_index('Semester'))
+
+    #Target CGPA calculator
+    st.header("Target CGPA Calculator")
+    completed_semesters = st.number_input("Number of semesters completed: ", min_value=0, step=1, value=1, key="completed_semesters")
+    current_cgpa = st.number_input("Current CGPA: ", min_value=0.0, value=final_cgpa, key="current_cgpa")
+    target_cgpa = st.number_input("Target CGPA for the next semester: ", min_value=0.0, key="target_cgpa")
+
+    if st.button("Calculate Required SGPA"):
+        required_sgpa = calculate_required_sgpa(current_cgpa, target_cgpa, completed_semesters)
+        if required_sgpa > 10:
+            st.warning("Oops! You need a very high SGPA to achieve your target CGPA.")
+        else:
+            st.success(f"You need an SGPA of {required_sgpa:.2f} in the next semester to achieve your target CGPA.")
 
 if __name__ == "__main__":
     main()
