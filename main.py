@@ -43,7 +43,7 @@ def calculate_sgpa(subjects_data):
 #CGPA function
 def calculate_cgpa(semester_data):
     total_semesters = len(semester_data)
-    cumulative_sgpa = sum(semester_sgpa for semester_sgpa, _ in semester_data)
+    cumulative_sgpa = sum(semester_sgpa for semester_sgpa, in semester_data)
     
     if total_semesters > 0:
         cgpa = cumulative_sgpa / total_semesters
